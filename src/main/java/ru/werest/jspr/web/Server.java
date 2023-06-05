@@ -13,12 +13,12 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static ru.werest.jspr.web.Constants.PORT;
-import static ru.werest.jspr.web.Constants.THREAD_POOL;
-
 public class Server{
     private final ExecutorService executorService;
     private final List<String> validPaths = List.of("/index.html", "/spring.svg", "/spring.png", "/resources.html", "/styles.css", "/app.js", "/links.html", "/forms.html", "/classic.html", "/events.html", "/events.js");
+
+    private static final int PORT = 9999;
+    private static final int THREAD_POOL = 64;
 
     public Server() {
         this.executorService = Executors.newFixedThreadPool(THREAD_POOL);
