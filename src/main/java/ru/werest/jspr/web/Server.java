@@ -9,7 +9,10 @@ import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -20,8 +23,11 @@ public class Server{
     private static final int PORT = 9999;
     private static final int THREAD_POOL = 64;
 
+    private final ConcurrentHashMap<String, Map<String, Handler>> handlerHashMap;
+
     public Server() {
         this.executorService = Executors.newFixedThreadPool(THREAD_POOL);
+        handlerHashMap = new ConcurrentHashMap<>();
     }
 
     //Запуск сервера - прослушивание
@@ -50,50 +56,85 @@ public class Server{
                 // just close socket
                 return;
             }
-            final var path = parts[1];
-            if (!validPaths.contains(path)) {
-                out.write((
-                        "HTTP/1.1 404 Not Found\r\n" +
-                                "Content-Length: 0\r\n" +
-                                "Connection: close\r\n" +
-                                "\r\n"
-                ).getBytes());
-                out.flush();
+
+            String method = parts[0];
+            String path = parts[1];
+
+            Request request = new Request(method, path);
+
+            //404
+            if (!handlerHashMap.containsKey(request.getMethod())) {
+                customReponse(out, 404, "Not found");
                 return;
             }
-            final var filePath = Path.of(".", "public", path);
-            final var mimeType = Files.probeContentType(filePath);
-            // special case for classic
-            if (path.equals("/classic.html")) {
-                final var template = Files.readString(filePath);
-                final var content = template.replace(
-                        "{time}",
-                        LocalDateTime.now().toString()
-                ).getBytes();
-                out.write((
-                        "HTTP/1.1 200 OK\r\n" +
-                                "Content-Type: " + mimeType + "\r\n" +
-                                "Content-Length: " + content.length + "\r\n" +
-                                "Connection: close\r\n" +
-                                "\r\n"
-                ).getBytes());
-                out.write(content);
-                out.flush();
-                return;
+
+            Map<String, Handler> handlerMap = handlerHashMap.get(request.getMethod());
+            String pathRequest = request.getPath();
+
+            if(handlerMap.containsKey(pathRequest)) {
+                Handler handler = handlerMap.get(pathRequest);
+                handler.handle(request, out);
+            } else {
+                if (!validPaths.contains(request.getPath())) {
+                    //404
+                    customReponse(out, 404, "Not found");
+                } else {
+                    defaultHandle(out, path);
+                }
             }
-            final var length = Files.size(filePath);
-            out.write((
-                    "HTTP/1.1 200 OK\r\n" +
-                            "Content-Type: " + mimeType + "\r\n" +
-                            "Content-Length: " + length + "\r\n" +
-                            "Connection: close\r\n" +
-                            "\r\n"
-            ).getBytes());
-            Files.copy(filePath, out);
-            out.flush();
+
         } catch (IOException e) {
            e.printStackTrace();
         }
     }
 
+    private void defaultHandle(BufferedOutputStream out, String path) throws IOException {
+        final var filePath = Path.of(".", "public", path);
+        final var mimeType = Files.probeContentType(filePath);
+        // special case for classic
+        if (path.equals("/classic.html")) {
+            final var template = Files.readString(filePath);
+            final var content = template.replace(
+                    "{time}",
+                    LocalDateTime.now().toString()
+            ).getBytes();
+            out.write((
+                    "HTTP/1.1 200 OK\r\n" +
+                            "Content-Type: " + mimeType + "\r\n" +
+                            "Content-Length: " + content.length + "\r\n" +
+                            "Connection: close\r\n" +
+                            "\r\n"
+            ).getBytes());
+            out.write(content);
+            out.flush();
+            return;
+        }
+        final var length = Files.size(filePath);
+        out.write((
+                "HTTP/1.1 200 OK\r\n" +
+                        "Content-Type: " + mimeType + "\r\n" +
+                        "Content-Length: " + length + "\r\n" +
+                        "Connection: close\r\n" +
+                        "\r\n"
+        ).getBytes());
+        Files.copy(filePath, out);
+        out.flush();
+    }
+
+    public void customReponse(BufferedOutputStream out, int code, String status) throws IOException {
+        out.write((
+                "HTTP/1.1 " + code + " " + status + "\r\n" +
+                        "Content-Length: 0\r\n" +
+                        "Connection: close\r\n" +
+                        "\r\n"
+        ).getBytes());
+        out.flush();
+    }
+
+    public void addHandler(String method, String path, Handler handler) {
+        if(!handlerHashMap.containsKey(method)) {
+            handlerHashMap.put(method, new HashMap<>());
+        }
+        handlerHashMap.get(method).put(path, handler);
+    }
 }
