@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
@@ -58,7 +59,14 @@ public class Server{
             }
 
             String method = parts[0];
-            String path = parts[1];
+            String pathQuery = parts[1];
+            var params = Request.getQueryParam(pathQuery);
+            String path = Request.getQueryParams(pathQuery);
+
+            if (params != null) {
+                System.out.println(params);
+            }
+            System.out.println(path);
 
             Request request = new Request(method, path);
 
@@ -83,7 +91,7 @@ public class Server{
                 }
             }
 
-        } catch (IOException e) {
+        } catch (IOException | URISyntaxException e) {
            e.printStackTrace();
         }
     }
