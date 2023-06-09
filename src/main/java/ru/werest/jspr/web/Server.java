@@ -59,16 +59,20 @@ public class Server{
             }
 
             String method = parts[0];
-            String pathQuery = parts[1];
-            var params = Request.getQueryParam(pathQuery);
-            String path = Request.getQueryParams(pathQuery);
+            String path = parts[1];
 
-            if (params != null) {
+
+            Request request = new Request(method, path);
+
+
+            var param = request.getQueryParam("last");
+            var params = request.getQueryParams();
+
+            if (!params.isEmpty()) {
+                System.out.println(param);
                 System.out.println(params);
             }
             System.out.println(path);
-
-            Request request = new Request(method, path);
 
             //404
             if (!handlerHashMap.containsKey(request.getMethod())) {
@@ -77,7 +81,7 @@ public class Server{
             }
 
             Map<String, Handler> handlerMap = handlerHashMap.get(request.getMethod());
-            String pathRequest = request.getPath();
+            String pathRequest = preparePath(request.getPath());
 
             if(handlerMap.containsKey(pathRequest)) {
                 Handler handler = handlerMap.get(pathRequest);
@@ -144,5 +148,13 @@ public class Server{
             handlerHashMap.put(method, new HashMap<>());
         }
         handlerHashMap.get(method).put(path, handler);
+    }
+
+    public String preparePath(String url) {
+        int i = url.indexOf("?");
+        if (i == -1) {
+            return url;
+        }
+        return url.substring(0, i);
     }
 }

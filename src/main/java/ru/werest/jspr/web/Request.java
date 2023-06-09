@@ -5,17 +5,17 @@ import org.apache.hc.core5.net.URIBuilder;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.UnknownHostException;
 import java.util.List;
 
 public class Request {
     private final String method;
     private final String path;
-    private List<NameValuePair> query;
+    private final List<NameValuePair> queryParams;
 
-    public Request(String method, String path) {
+    public Request(String method, String path) throws URISyntaxException {
         this.method = method;
         this.path = path;
+        this.queryParams = parseQueryParams();
     }
 
     public String getMethod() {
@@ -26,17 +26,23 @@ public class Request {
         return path;
     }
 
-    public static List<NameValuePair> getQueryParam(String url) throws UnknownHostException, URISyntaxException {
-        URIBuilder uriBuilder = new URIBuilder(new URI(url));
-        return uriBuilder.getQueryParams().isEmpty() ? null : uriBuilder.getQueryParams();
+    //Получения значения конкретного параметра
+    public String getQueryParam(String name)  {
+        return queryParams.stream()
+                .filter(x -> x.getName().equals(name))
+                .findFirst()
+                .map(NameValuePair::getValue)
+                .orElse(null);
     }
 
-    public static String getQueryParams(String url) {
-        int i = url.indexOf("?");
-        if (i == -1) {
-            return url;
-        }
-        return url.substring(0, i);
+    //Получения всех query params
+    public List<NameValuePair> getQueryParams() {
+        return queryParams;
+    }
+
+    private List<NameValuePair> parseQueryParams() throws URISyntaxException {
+        URIBuilder uriBuilder = new URIBuilder(new URI(path));
+        return uriBuilder.getQueryParams();
     }
 
 
