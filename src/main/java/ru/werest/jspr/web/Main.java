@@ -9,7 +9,14 @@ public class Main {
         // добавление хендлеров (обработчиков)
         server.addHandler("GET", "/messages", (request, responseStream) -> {
             try {
-                server.customReponse(responseStream, 423, "Not found");
+//                server.customReponse(responseStream, 423, "Not found");
+                responseStream.write((
+                        "HTTP/1.1 200 OK\r\n" +
+                                "Content-Length: 0\r\n" +
+                                "Connection: close\r\n" +
+                                "\r\n"
+                ).getBytes());
+                responseStream.flush();
             } catch (IOException e) {
                 e.printStackTrace();
             }

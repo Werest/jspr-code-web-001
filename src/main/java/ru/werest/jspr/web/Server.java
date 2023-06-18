@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
@@ -60,7 +61,18 @@ public class Server{
             String method = parts[0];
             String path = parts[1];
 
+
             Request request = new Request(method, path);
+
+
+            var param = request.getQueryParam("last");
+            var params = request.getQueryParams();
+
+            if (!params.isEmpty()) {
+                System.out.println(param);
+                System.out.println(params);
+            }
+            System.out.println(path);
 
             //404
             if (!handlerHashMap.containsKey(request.getMethod())) {
@@ -69,7 +81,7 @@ public class Server{
             }
 
             Map<String, Handler> handlerMap = handlerHashMap.get(request.getMethod());
-            String pathRequest = request.getPath();
+            String pathRequest = preparePath(request.getPath());
 
             if(handlerMap.containsKey(pathRequest)) {
                 Handler handler = handlerMap.get(pathRequest);
@@ -83,7 +95,7 @@ public class Server{
                 }
             }
 
-        } catch (IOException e) {
+        } catch (IOException | URISyntaxException e) {
            e.printStackTrace();
         }
     }
@@ -136,5 +148,13 @@ public class Server{
             handlerHashMap.put(method, new HashMap<>());
         }
         handlerHashMap.get(method).put(path, handler);
+    }
+
+    public String preparePath(String url) {
+        int i = url.indexOf("?");
+        if (i == -1) {
+            return url;
+        }
+        return url.substring(0, i);
     }
 }
